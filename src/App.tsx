@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useStore } from './store'
 import SetupScreen from './pages/SetupScreen'
 import LoginScreen from './pages/LoginScreen'
@@ -17,6 +18,17 @@ const REQUIRED_VARS = [
   'VITE_ANTHROPIC_API_KEY',
 ]
 
+// React Router doesn't reset scroll position on client-side navigation
+// (only full page loads do that by default) -- without this, landing on
+// a new page can leave you scrolled to wherever the previous page was.
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
 export default function App() {
   const missing = REQUIRED_VARS.filter((key) => !import.meta.env[key])
   const currentUser = useStore((s) => s.currentUser)
@@ -31,6 +43,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomeScreen />} />
         <Route path="/diagnostic" element={<DiagnosticScreen />} />
