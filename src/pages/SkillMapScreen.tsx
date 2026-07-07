@@ -10,6 +10,10 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+function skillKey(skill: SkillPill): string {
+  return `${skill.category}::${skill.name}`
+}
+
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 
 function SkeletonMap() {
@@ -34,39 +38,58 @@ function SkeletonMap() {
   )
 }
 
-// ── Course drawer ─────────────────────────────────────────────────────────────
+// ── Bulk enrol summary drawer ─────────────────────────────────────────────────
 
-type EnrolState = 'idle' | 'loading' | 'unlocked' | 'error'
+type BulkStatus = 'idle' | 'loading' | 'done'
 
-function CourseDrawer({
-  skill,
-  course,
+function EnrolSummaryDrawer({
+  skills,
+  catalogue,
   onClose,
   onEnrolled,
 }: {
-  skill: SkillPill
-  course: Course | null
+  skills: SkillPill[]
+  catalogue: Course[]
   onClose: () => void
-  onEnrolled: (courseId: string) => void
+  onEnrolled: (courseIds: string[]) => void
 }) {
   const currentUser = useStore((s) => s.currentUser)
-  const [status, setStatus] = useState<EnrolState>('idle')
-  const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState<BulkStatus>('idle')
+  const [results, setResults] = useState<Record<string, 'success' | 'error'>>({})
   const [dragY, setDragY] = useState(0)
   const [dragStartY, setDragStartY] = useState<number | null>(null)
 
-  async function handleEnrol() {
-    if (!course || !currentUser) return
-    setStatus('loading')
-    setError(null)
-    try {
-      await enrolUser(course.id, currentUser.id)
-      onEnrolled(course.id)
-      setStatus('unlocked')
-    } catch (err) {
-      setStatus('error')
-      setError(String(err))
+  const plan = useMemo(() => {
+    const byCourse: Record<string, { course: Course; skills: SkillPill[] }> = {}
+    for (const skill of skills) {
+      const courseId = skill.courseIds[0]
+      const course = catalogue.find((c) => c.id === courseId)
+      if (!course) continue
+      if (!byCourse[courseId]) byCourse[courseId] = { course, skills: [] }
+      byCourse[courseId].skills.push(skill)
     }
+    return Object.values(byCourse)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skills, catalogue])
+
+  async function handleEnrolAll() {
+    if (!currentUser) return
+    setStatus('loading')
+    const newResults: Record<string, 'success' | 'error'> = {}
+    for (const { course } of plan) {
+      try {
+        await enrolUser(course.id, currentUser.id)
+        newResults[course.id] = 'success'
+      } catch {
+        newResults[course.id] = 'error'
+      }
+    }
+    setResults(newResults)
+    setStatus('done')
+    const successIds = Object.entries(newResults)
+      .filter(([, v]) => v === 'success')
+      .map(([id]) => id)
+    if (successIds.length > 0) onEnrolled(successIds)
   }
 
   function handleTouchStart(e: React.TouchEvent) {
@@ -88,13 +111,16 @@ function CourseDrawer({
     setDragStartY(null)
   }
 
+  const successCount = Object.values(results).filter((r) => r === 'success').length
+  const errorCount = Object.values(results).filter((r) => r === 'error').length
+
   return (
     <div className="fixed inset-0 z-30 flex items-end justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div
         className="relative w-full max-w-lg bg-white rounded-t-2xl shadow-xl"
         style={{
-          height: '60vh',
+          height: '70vh',
           transform: `translateY(${dragY}px)`,
           transition: dragStartY === null ? 'transform 0.2s ease-out' : 'none',
         }}
@@ -106,45 +132,61 @@ function CourseDrawer({
           <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
         </div>
 
-        <div className="px-6 py-4 overflow-y-auto" style={{ maxHeight: 'calc(60vh - 24px)' }}>
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{skill.category}</p>
-          <h2 className="text-lg font-bold text-gray-900 mb-4">{skill.name}</h2>
-
-          {!course ? (
-            <p className="text-sm text-gray-500">No matching course found in the catalogue.</p>
-          ) : (
-            <div className="border border-gray-200 rounded p-4">
-              {course.imageUrl && (
-                <img src={course.imageUrl} alt={course.title} className="w-full h-28 object-cover rounded mb-3" />
-              )}
-              <p className="font-semibold text-gray-900 text-sm mb-1">{course.title}</p>
-              {course.summary && (
-                <p className="text-xs text-gray-600 mb-2 leading-relaxed">
-                  {stripHtml(course.summary).slice(0, 200)}
+        <div className="px-6 py-4 overflow-y-auto flex flex-col" style={{ maxHeight: 'calc(70vh - 24px)' }}>
+          {status === 'done' ? (
+            <div className="text-center py-6">
+              <p className="text-lg font-bold text-brand-700 mb-2">
+                {successCount} of {plan.length} courses enrolled ✓
+              </p>
+              {errorCount > 0 && (
+                <p className="text-xs text-red-700 mb-4">
+                  {errorCount} course{errorCount !== 1 ? 's' : ''} failed to enrol — try again from the map.
                 </p>
               )}
-              {course.estimated_duration > 0 && (
-                <p className="text-xs text-gray-500 mb-3">{course.estimated_duration} min</p>
-              )}
-
-              {status === 'unlocked' ? (
-                <div className="bg-brand-50 border border-brand-200 rounded px-3 py-2 text-center">
-                  <p className="text-sm font-semibold text-brand-700">Skill unlocked ✓</p>
-                </div>
-              ) : (
-                <button
-                  onClick={handleEnrol}
-                  disabled={status === 'loading'}
-                  className="w-full bg-brand-700 hover:bg-brand-800 disabled:bg-brand-300 text-white text-sm font-semibold rounded py-3 transition-colors"
-                >
-                  {status === 'loading' ? 'Enrolling…' : 'Enrol and grab this skill'}
-                </button>
-              )}
-
-              {status === 'error' && error && (
-                <p className="text-xs text-red-700 mt-2">{error}</p>
-              )}
+              <button
+                onClick={onClose}
+                className="bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold rounded px-6 py-3"
+              >
+                Done
+              </button>
             </div>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">What you'll learn</p>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">
+                {plan.length} course{plan.length !== 1 ? 's' : ''}, {skills.length} skill{skills.length !== 1 ? 's' : ''}
+              </h2>
+
+              <div className="space-y-3 mb-4 overflow-y-auto">
+                {plan.map(({ course, skills: courseSkills }) => (
+                  <div key={course.id} className="border border-gray-200 rounded p-3">
+                    <p className="font-semibold text-gray-900 text-sm mb-1">{course.title}</p>
+                    {course.summary && (
+                      <p className="text-xs text-gray-600 mb-2 leading-relaxed">
+                        {stripHtml(course.summary).slice(0, 140)}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {courseSkills.map((s) => (
+                        <span key={s.name} className="text-xs bg-brand-50 text-brand-800 rounded-full px-2 py-0.5">
+                          {s.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={handleEnrolAll}
+                disabled={status === 'loading' || plan.length === 0}
+                className="w-full bg-brand-700 hover:bg-brand-800 disabled:bg-brand-300 text-white text-sm font-semibold rounded py-3 transition-colors"
+              >
+                {status === 'loading'
+                  ? 'Enrolling…'
+                  : `Enrol me in ${plan.length} course${plan.length !== 1 ? 's' : ''}`}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -165,7 +207,8 @@ export default function SkillMapScreen() {
   const [error, setError] = useState<string | null>(null)
   const [skillMap, setSkillMap] = useState<ReturnType<typeof buildSkillMap> | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-  const [selectedSkill, setSelectedSkill] = useState<SkillPill | null>(null)
+  const [selectedSkills, setSelectedSkills] = useState<Record<string, SkillPill>>({})
+  const [showDrawer, setShowDrawer] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -217,9 +260,26 @@ export default function SkillMapScreen() {
     setExpanded((prev) => ({ ...prev, [category]: !prev[category] }))
   }
 
-  const selectedCourse = selectedSkill
-    ? catalogue.find((c) => c.id === selectedSkill.courseIds[0]) ?? null
-    : null
+  function toggleSkill(skill: SkillPill) {
+    setSelectedSkills((prev) => {
+      const key = skillKey(skill)
+      const next = { ...prev }
+      if (next[key]) delete next[key]
+      else next[key] = skill
+      return next
+    })
+  }
+
+  const selectedList = Object.values(selectedSkills)
+
+  function handleEnrolled(courseIds: string[]) {
+    courseIds.forEach((id) => addEnrolledCourse(id))
+  }
+
+  function closeDrawer() {
+    setShowDrawer(false)
+    setSelectedSkills({})
+  }
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -262,7 +322,8 @@ export default function SkillMapScreen() {
       )}
 
       {!loading && !error && skillMap && (
-        <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
+        <div className={`px-4 py-6 max-w-lg mx-auto space-y-6 ${selectedList.length > 0 ? 'pb-24' : ''}`}>
+          <p className="text-xs text-gray-500">Tap skills to select them, then enrol in everything at once.</p>
           {skillMap.categoryOrder.map((category) => (
             <div key={category}>
               <button
@@ -279,14 +340,17 @@ export default function SkillMapScreen() {
                 <div className="flex flex-wrap gap-2">
                   {skillMap.categories[category].map((skill) => {
                     const completed = isSkillCompleted(skill)
+                    const selected = !!selectedSkills[skillKey(skill)]
                     return (
                       <button
                         key={skill.name}
-                        onClick={() => !completed && setSelectedSkill(skill)}
+                        onClick={() => !completed && toggleSkill(skill)}
                         disabled={completed}
                         className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${
                           completed
                             ? 'bg-brand-600 border-brand-600 text-white opacity-70'
+                            : selected
+                            ? 'bg-brand-700 border-brand-700 text-white'
                             : 'bg-white border-brand-300 text-brand-800 hover:border-brand-600 hover:bg-brand-50'
                         }`}
                       >
@@ -301,12 +365,34 @@ export default function SkillMapScreen() {
         </div>
       )}
 
-      {selectedSkill && (
-        <CourseDrawer
-          skill={selectedSkill}
-          course={selectedCourse}
-          onClose={() => setSelectedSkill(null)}
-          onEnrolled={(courseId) => addEnrolledCourse(courseId)}
+      {selectedList.length > 0 && !showDrawer && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-brand-700 px-4 py-3 z-20">
+          <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
+            <button
+              onClick={() => setSelectedSkills({})}
+              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              Clear
+            </button>
+            <p className="text-sm text-gray-700 flex-1 text-center">
+              {selectedList.length} skill{selectedList.length !== 1 ? 's' : ''} selected
+            </p>
+            <button
+              onClick={() => setShowDrawer(true)}
+              className="bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold rounded px-5 py-2.5 transition-colors"
+            >
+              Review & enrol
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showDrawer && selectedList.length > 0 && (
+        <EnrolSummaryDrawer
+          skills={selectedList}
+          catalogue={catalogue}
+          onClose={closeDrawer}
+          onEnrolled={handleEnrolled}
         />
       )}
     </div>

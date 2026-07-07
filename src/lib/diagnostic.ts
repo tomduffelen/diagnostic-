@@ -26,10 +26,16 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+// Hard ceiling on how many user replies the conversation can take before
+// it's forced to conclude — a prompt-only "keep it short" instruction
+// wasn't reliably respected, so this is enforced in code as well.
+const HARD_CAP_EXCHANGES = 5
+
 function buildSystemPrompt(
   catalogue: Course[],
   selectedRoles: string[],
-  subject?: DiagnosticSubjectContext
+  subject?: DiagnosticSubjectContext,
+  exchangeCount: number = 0
 ): string {
   const validCatalogue = catalogue.filter((c) => !isExcludedCourse(c))
 
@@ -69,6 +75,11 @@ function buildSystemPrompt(
     ? `Great, ${firstName} — I have everything I need. Tap below to see your results.`
     : `Great — I have everything I need. Tap below to see your results.`
 
+  const mustWrapUp = exchangeCount >= HARD_CAP_EXCHANGES
+  const wrapUpDirective = mustWrapUp
+    ? `\nSTOP: This is the final exchange. You MUST output ONLY the <gap_profile> block right now, based on everything discussed so far. Do NOT ask another question, even if you haven't covered every domain.\n`
+    : ''
+
   return `You are Compass, a leadership development coach.
 
 Have a warm, adaptive conversation to identify leadership skill gaps, then output a gap profile.
@@ -82,12 +93,13 @@ RULES:
   3. Open reflection: ask about a real experience ("Tell me about a time you had to give someone difficult feedback — how did you handle it?")
   4. Confidence check: "How comfortable are you with [skill]?" with options Not yet / Getting there / Confident
 - BRANCHING: If a learner shows uncertainty or a gap in an area, ask at least one deeper follow-up before moving on. If clearly confident, move on without probing.
-- ADAPTIVE LENGTH: 5–8 exchanges is typical. Go longer if multiple gaps need probing. Go shorter if the learner is competent across all areas. Never pad with unnecessary questions.
+- LENGTH: target 3–4 exchanges total. ${HARD_CAP_EXCHANGES} is a HARD MAXIMUM — you must end the conversation and output the gap_profile by then, no exceptions, even if you haven't covered every domain. Prioritise your highest-signal questions first so you can conclude confidently within this limit. Never pad with unnecessary questions.
 - Only reference courses that exist in the catalogue below. Use exact course titles.
 
 ${roleContext}
 
 ${framingContext}
+${wrapUpDirective}
 
 MULTIPLE CHOICE FORMAT — when you want to ask a multiple-choice question, output EXACTLY this structure. You may write one brief sentence of context BEFORE the block; write nothing after it until the learner replies:
 <mc_question>
@@ -163,11 +175,12 @@ export async function sendMessage(
   }
 
   const messages = history.length > 0 ? history : [{ role: 'user' as const, content: seedContent }]
+  const exchangeCount = messages.filter((m) => m.role === 'user').length
 
   const body = JSON.stringify({
     model: 'claude-sonnet-4-5',
     max_tokens: 1500,
-    system: buildSystemPrompt(catalogue, selectedRoles, subject),
+    system: buildSystemPrompt(catalogue, selectedRoles, subject, exchangeCount),
     messages,
   })
 

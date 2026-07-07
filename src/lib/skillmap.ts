@@ -102,7 +102,9 @@ export async function extractSkills(catalogue: Course[]): Promise<CourseSkillGro
   if (cached) return cached
 
   const body = JSON.stringify({
-    model: 'claude-sonnet-4-5',
+    // Structured extraction into a fixed JSON shape doesn't need Sonnet's
+    // reasoning — Haiku is far cheaper and plenty for this task.
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 3000,
     messages: [{ role: 'user', content: buildPrompt(validCatalogue) }],
   })
