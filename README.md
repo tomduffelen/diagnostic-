@@ -1,6 +1,6 @@
-# Jeeves — POC
+# Compass — POC
 
-An AI-powered learning diagnostic tool for kitchen and bar teams. Jeeves connects to a live Totara 20 LMS, pulls the real course catalogue, runs a conversational skill diagnostic via Claude, and enrols learners directly into recommended courses — all from a mobile-friendly web app.
+An AI-powered leadership skills diagnostic tool. Compass connects to a live Totara 20 LMS, pulls the real course catalogue, runs a conversational leadership skill diagnostic via Claude, and enrols learners directly into recommended courses — all from a mobile-friendly web app.
 
 ---
 
@@ -295,7 +295,7 @@ Browser → localhost:5173/anthropic-api/... → proxy → https://api.anthropic
 
 The Anthropic proxy additionally strips the `Origin` and `Referer` headers so Anthropic doesn't detect it as a browser CORS request and block it.
 
-This proxy only exists in development (`npm run dev`). In production, the API calls would need a real backend.
+This proxy only exists in development (`npm run dev`). In production (Vercel), the app instead calls two serverless functions — `api/totara.js` and `api/anthropic.js` — which hold the secrets server-side and proxy the same requests. `src/lib/totara.ts` and `src/lib/diagnostic.ts` pick the right path automatically based on `import.meta.env.DEV`.
 
 ---
 
@@ -362,7 +362,7 @@ Dark-themed developer screen. Tests OAuth, connection, catalogue, job assignment
 ## Outstanding items before production
 
 ### Security
-- **API keys in the browser** — `VITE_ANTHROPIC_API_KEY` and `VITE_TOTARA_CLIENT_SECRET` are embedded in the client bundle. This is acceptable for a POC demo but must not go to production. The fix is a thin backend (e.g. a Vercel edge function or Express server) that holds the keys and proxies requests.
+- **API keys in the browser during local dev only** — in `npm run dev`, `VITE_ANTHROPIC_API_KEY` and `VITE_TOTARA_CLIENT_SECRET` are still embedded in the client bundle (fine for local testing). In production, `api/totara.js` and `api/anthropic.js` hold these secrets server-side instead, so the deployed bundle never contains them.
 
 ### Authentication
 - **Hardcoded learner ID** — `VITE_LEARNER_USER_ID` is a single integer set in `.env`. A production version needs SSO or at minimum a login step that maps the session to a Totara user ID.

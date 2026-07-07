@@ -11,10 +11,10 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'Jeeves',
-          short_name: 'Jeeves',
-          description: 'AI-powered learning coach for kitchen and bar teams',
-          theme_color: '#4f46e5',
+          name: 'Compass',
+          short_name: 'Compass',
+          description: 'AI-powered leadership skills diagnostic',
+          theme_color: '#112a1e',
           background_color: '#ffffff',
           display: 'standalone',
           start_url: '/',

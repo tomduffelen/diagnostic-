@@ -104,16 +104,23 @@ async function gqlRequest<T>(
   query: string,
   variables: Record<string, unknown> = {}
 ): Promise<T> {
-  const token = await getAccessToken()
-
-  const res = await fetch(API_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ query, variables }),
-  })
+  const res = import.meta.env.DEV
+    ? await (async () => {
+        const token = await getAccessToken()
+        return fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ query, variables }),
+        })
+      })()
+    : await fetch('/api/totara', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables }),
+      })
 
   if (!res.ok) {
     throw new Error(`Totara API error: ${res.status} ${res.statusText}`)

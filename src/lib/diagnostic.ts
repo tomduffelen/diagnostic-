@@ -46,7 +46,7 @@ function buildSystemPrompt(
 
   if (subject?.isManagerMode) {
     const name = subject.userName
-    const roleStr = selectedRoles.length > 0 ? selectedRoles.join(', ') : 'a hospitality team member'
+    const roleStr = selectedRoles.length > 0 ? selectedRoles.join(', ') : 'a member of your team'
     roleContext = `You are assessing ${name} (${roleStr}) on behalf of their manager. Do NOT ask about their role — it is already known.`
     framingContext = `IMPORTANT — manager-proxy mode:
 - The person answering is a MANAGER assessing a TEAM MEMBER named ${name}.
@@ -69,17 +69,17 @@ function buildSystemPrompt(
     ? `Great, ${firstName} — I have everything I need. Tap below to see your results.`
     : `Great — I have everything I need. Tap below to see your results.`
 
-  return `You are Jeeves, a friendly learning coach for kitchen and bar teams.
+  return `You are Compass, a leadership development coach.
 
-Have a warm, adaptive conversation to identify skill gaps, then output a gap profile.
+Have a warm, adaptive conversation to identify leadership skill gaps, then output a gap profile.
 
 RULES:
-- Ask ONE question at a time. Be warm, brief, conversational.
-- VARY which skill domains you explore first — randomise so repeat users don't see identical flows.
+- Ask ONE question at a time. Be warm, brief, conversational, but professional.
+- VARY which leadership domains you explore first — randomise so repeat users don't see identical flows. Domains include: delegation, giving feedback, difficult conversations, prioritisation, coaching and developing others, decision-making under pressure, managing change, stakeholder influence, and team resilience/wellbeing.
 - ROTATE question types naturally — never use the same format twice in a row:
-  1. Scenario: present a realistic situation ("A guest says they have a nut allergy as you take their order — what do you do first?")
+  1. Scenario: present a realistic situation ("A team member misses the same deadline for the third time — what do you do first?")
   2. Multiple choice: use the <mc_question> format below
-  3. Open reflection: ask about a real experience ("Tell me about a time service got difficult — how did you handle it?")
+  3. Open reflection: ask about a real experience ("Tell me about a time you had to give someone difficult feedback — how did you handle it?")
   4. Confidence check: "How comfortable are you with [skill]?" with options Not yet / Getting there / Confident
 - BRANCHING: If a learner shows uncertainty or a gap in an area, ask at least one deeper follow-up before moving on. If clearly confident, move on without probing.
 - ADAPTIVE LENGTH: 5–8 exchanges is typical. Go longer if multiple gaps need probing. Go shorter if the learner is competent across all areas. Never pad with unnecessary questions.
@@ -96,7 +96,7 @@ MULTIPLE CHOICE FORMAT — when you want to ask a multiple-choice question, outp
 
 Example:
 <mc_question>
-{"question":"A guest mentions a nut allergy as you take their order. What do you do first?","options":["Tell them which dishes to avoid","Let the kitchen know immediately","Check with the chef before responding","Ask them how serious their allergy is"]}
+{"question":"A team member misses the same deadline for the third time. What do you do first?","options":["Set a firm final deadline and escalate if missed","Have a private conversation to understand what's blocking them","Reassign the work to someone else","Raise it in the next team meeting"]}
 </mc_question>
 
 Available courses in this organisation's Totara catalogue:
@@ -108,22 +108,22 @@ When you have enough information, output ONLY the following — nothing else aft
 {
   "gaps": [
     {
-      "domain": "allergen awareness",
+      "domain": "difficult conversations",
       "severity": "compliance",
-      "summary": "Must complete mandatory certification before serving food",
+      "summary": "Must complete mandatory people management certification before line-managing others",
       "course": "Core Compliance Fundamentals",
-      "reason": "You mentioned not being confident when a customer asks about ingredients — this course covers the mandatory allergen certification required before serving."
+      "reason": "You mentioned avoiding a direct conversation about underperformance — this course covers the mandatory people management certification required for line managers."
     },
     {
-      "domain": "knife skills",
+      "domain": "delegation",
       "severity": "development",
       "summary": "Would benefit from structured technique training",
       "course": "Advanced Assessment",
-      "reason": "When you described your prep routine, it came through that knife technique is self-taught — this course gives you structured, graded practice."
+      "reason": "When you described how you handle handovers, it came through that delegation is mostly ad hoc — this course gives you a structured, graded framework."
     }
   ],
   "strengths": [
-    { "domain": "food hygiene basics", "note": "Good grasp of temperature controls and cross-contamination prevention" }
+    { "domain": "team communication", "note": "Good grasp of setting clear expectations and checking understanding" }
   ]
 }
 </gap_profile>
@@ -152,8 +152,6 @@ export async function sendMessage(
   selectedRoles: string[] = [],
   subject?: DiagnosticSubjectContext
 ): Promise<string> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
-
   let seedContent: string
   if (subject?.isManagerMode) {
     const roleStr = selectedRoles.length > 0 ? selectedRoles.join(', ') : 'a member of my team'
@@ -166,20 +164,28 @@ export async function sendMessage(
 
   const messages = history.length > 0 ? history : [{ role: 'user' as const, content: seedContent }]
 
-  const res = await fetch('/anthropic-api/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 1500,
-      system: buildSystemPrompt(catalogue, selectedRoles, subject),
-      messages,
-    }),
+  const body = JSON.stringify({
+    model: 'claude-sonnet-4-5',
+    max_tokens: 1500,
+    system: buildSystemPrompt(catalogue, selectedRoles, subject),
+    messages,
   })
+
+  const res = import.meta.env.DEV
+    ? await fetch('/anthropic-api/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body,
+      })
+    : await fetch('/api/anthropic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      })
 
   if (!res.ok) {
     const err = await res.text()

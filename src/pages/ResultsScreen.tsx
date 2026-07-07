@@ -18,21 +18,21 @@ function findCourse(title: string | undefined, catalogue: Course[]): Course | nu
 const SEV_CONFIG = {
   compliance: {
     label: 'HIGH RISK',
-    border: 'border-l-red-500',
+    border: 'border-l-red-600',
     badge: 'bg-red-50 text-red-700 border-red-200',
-    dot: 'bg-red-500',
+    dot: 'bg-red-600',
   },
   development: {
     label: 'DEVELOPMENT',
-    border: 'border-l-blue-500',
+    border: 'border-l-blue-600',
     badge: 'bg-blue-50 text-blue-700 border-blue-200',
-    dot: 'bg-blue-500',
+    dot: 'bg-blue-600',
   },
   aspiration: {
     label: 'STRETCH',
-    border: 'border-l-purple-400',
+    border: 'border-l-purple-500',
     badge: 'bg-purple-50 text-purple-700 border-purple-200',
-    dot: 'bg-purple-400',
+    dot: 'bg-purple-500',
   },
 }
 
@@ -47,12 +47,12 @@ function WhyButton({ reason }: { reason?: string }) {
     <div className="mt-2">
       <button
         onClick={() => setOpen(!open)}
-        className="font-mono text-xs text-gray-400 hover:text-teal-600 transition-colors no-print"
+        className="text-xs text-gray-500 hover:text-brand-700 transition-colors no-print"
       >
-        {open ? '▲ hide' : '? why this'}
+        {open ? 'Hide' : 'Why this?'}
       </button>
       {open && (
-        <p className="font-mono text-xs text-gray-500 mt-1.5 leading-relaxed border-l-2 border-teal-200 pl-2">
+        <p className="text-xs text-gray-600 mt-1.5 leading-relaxed border-l-2 border-brand-200 pl-2">
           {reason}
         </p>
       )}
@@ -74,7 +74,7 @@ function AutoEnrolCard({
   totaraUrl: string
 }) {
   return (
-    <div className="bg-white border border-zinc-200 print-section">
+    <div className="bg-white border border-gray-200 rounded print-section">
       {course.imageUrl && (
         <img src={course.imageUrl} alt={course.title} className="w-full h-24 object-cover no-print" />
       )}
@@ -83,21 +83,21 @@ function AutoEnrolCard({
 
         {status === 'loading' && (
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" />
-            <span className="font-mono text-xs text-gray-400">enrolling...</span>
+            <span className="w-2 h-2 bg-brand-600 rounded-full animate-pulse" />
+            <span className="text-xs text-gray-500">Enrolling…</span>
           </div>
         )}
 
         {status === 'enrolled' && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-green-600 font-semibold">✓ ENROLLED</span>
+              <span className="text-xs text-brand-700 font-semibold">✓ Enrolled</span>
             </div>
             <a
               href={`${totaraUrl}/course/view.php?id=${course.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="no-print block font-mono text-xs border border-zinc-300 hover:border-teal-500 text-gray-600 hover:text-teal-700 py-2 text-center transition-colors"
+              className="no-print block text-xs border border-gray-300 hover:border-brand-600 rounded text-gray-600 hover:text-brand-700 py-2 text-center transition-colors"
             >
               Open in Totara →
             </a>
@@ -106,15 +106,15 @@ function AutoEnrolCard({
 
         {status === 'already_enrolled' && (
           <div className="space-y-2">
-            <div className="bg-amber-50 border border-amber-200 px-3 py-2">
-              <p className="font-mono text-xs text-amber-700 font-semibold">Already enrolled</p>
-              <p className="font-mono text-xs text-amber-600 mt-0.5">Prioritise this course</p>
+            <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              <p className="text-xs text-amber-800 font-semibold">Already enrolled</p>
+              <p className="text-xs text-amber-700 mt-0.5">Prioritise this course</p>
             </div>
             <a
               href={`${totaraUrl}/course/view.php?id=${course.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="no-print block font-mono text-xs border border-zinc-300 hover:border-teal-500 text-gray-600 hover:text-teal-700 py-2 text-center transition-colors"
+              className="no-print block text-xs border border-gray-300 hover:border-brand-600 rounded text-gray-600 hover:text-brand-700 py-2 text-center transition-colors"
             >
               Open in Totara →
             </a>
@@ -122,9 +122,9 @@ function AutoEnrolCard({
         )}
 
         {status === 'error' && (
-          <p className="font-mono text-xs text-red-600">
+          <p className="text-xs text-red-700">
             Enrolment failed — enable manual enrolment on this course in Totara admin.
-            {error && <span className="block text-gray-400 mt-0.5">{error}</span>}
+            {error && <span className="block text-gray-500 mt-0.5">{error}</span>}
           </p>
         )}
         <WhyButton reason={reason} />
@@ -168,42 +168,42 @@ function DevCourseCard({
   }
 
   return (
-    <div className="bg-white border border-zinc-200 print-section">
+    <div className="bg-white border border-gray-200 rounded print-section">
       {course.imageUrl && (
         <img src={course.imageUrl} alt={course.title} className="w-full h-24 object-cover no-print" />
       )}
       <div className="p-4">
         <p className="font-semibold text-gray-900 text-sm leading-tight mb-1">{course.title}</p>
         {course.estimated_duration > 0 && (
-          <p className="font-mono text-xs text-gray-400 mb-3">{course.estimated_duration}min</p>
+          <p className="text-xs text-gray-500 mb-3">{course.estimated_duration} min</p>
         )}
 
         {preEnrolled ? (
           <div className="space-y-2">
-            <div className="bg-amber-50 border border-amber-200 px-3 py-2">
-              <p className="font-mono text-xs text-amber-700 font-semibold">You're already enrolled — prioritise this</p>
+            <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              <p className="text-xs text-amber-800 font-semibold">You're already enrolled — prioritise this</p>
             </div>
             <a
               href={`${totaraUrl}/course/view.php?id=${course.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="no-print block font-mono text-xs border border-zinc-300 hover:border-teal-500 text-gray-600 hover:text-teal-700 py-2 text-center transition-colors"
+              className="no-print block text-xs border border-gray-300 hover:border-brand-600 rounded text-gray-600 hover:text-brand-700 py-2 text-center transition-colors"
             >
-              OPEN →
+              Open →
             </a>
           </div>
         ) : justEnrolled ? (
           <div className="flex gap-2">
-            <span className="flex-1 font-mono text-xs border border-teal-500 text-teal-700 py-2 text-center tracking-widest">
-              ✓ ENROLLED
+            <span className="flex-1 text-xs border border-brand-600 text-brand-700 rounded py-2 text-center">
+              ✓ Enrolled
             </span>
             <a
               href={`${totaraUrl}/course/view.php?id=${course.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="no-print flex-1 font-mono text-xs border border-zinc-300 hover:border-teal-500 text-gray-600 hover:text-teal-700 py-2 text-center transition-colors"
+              className="no-print flex-1 text-xs border border-gray-300 hover:border-brand-600 rounded text-gray-600 hover:text-brand-700 py-2 text-center transition-colors"
             >
-              OPEN →
+              Open →
             </a>
           </div>
         ) : (
@@ -211,12 +211,12 @@ function DevCourseCard({
             <button
               onClick={handleEnrol}
               disabled={status === 'loading'}
-              className="no-print w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white font-mono text-xs py-2.5 transition-colors tracking-widest uppercase"
+              className="no-print w-full bg-brand-700 hover:bg-brand-800 disabled:bg-brand-300 text-white text-xs font-semibold rounded py-2.5 transition-colors"
             >
-              {status === 'loading' ? 'enrolling...' : '→ Enrol'}
+              {status === 'loading' ? 'Enrolling…' : 'Enrol'}
             </button>
             {status === 'error' && error && (
-              <p className="font-mono text-xs text-red-600 mt-2">{error}</p>
+              <p className="text-xs text-red-700 mt-2">{error}</p>
             )}
           </>
         )}
@@ -303,12 +303,12 @@ export default function ResultsScreen() {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6 text-center">
         <div>
-          <p className="font-mono text-sm text-gray-400 mb-4">no diagnostic on record</p>
+          <p className="text-sm text-gray-500 mb-4">No diagnostic on record</p>
           <button
             onClick={() => navigate('/diagnostic')}
-            className="bg-teal-600 text-white font-mono text-xs px-6 py-3 tracking-widest uppercase"
+            className="bg-brand-700 text-white text-sm font-semibold rounded px-6 py-3"
           >
-            → Run diagnostic
+            Run diagnostic
           </button>
         </div>
       </div>
@@ -333,20 +333,18 @@ export default function ResultsScreen() {
   return (
     <div className="min-h-screen bg-stone-50">
       {/* Header */}
-      <header className="bg-white border-b border-zinc-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10 no-print">
+      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10 no-print">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/')}
-            className="font-mono text-sm text-gray-400 hover:text-gray-700 transition-colors"
+            className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
           >
             ←
           </button>
           <div>
-            <p className="font-mono text-sm font-semibold text-gray-900 tracking-tight">
-              DIAGNOSTIC RESULTS
-            </p>
+            <p className="text-sm font-bold text-gray-900">Diagnostic results</p>
             {diagnosticSubject?.isManagerMode && (
-              <p className="font-mono text-xs text-teal-600 tracking-wide">
+              <p className="text-xs text-brand-700">
                 for {diagnosticSubject.userName}
               </p>
             )}
@@ -354,41 +352,41 @@ export default function ResultsScreen() {
         </div>
         <button
           onClick={() => window.print()}
-          className="font-mono text-xs border border-zinc-300 hover:border-teal-500 text-gray-600 hover:text-teal-700 px-3 py-2 transition-colors tracking-wide"
+          className="text-xs border border-gray-300 hover:border-brand-600 rounded text-gray-600 hover:text-brand-700 px-3 py-2 transition-colors"
         >
           Print / PDF
         </button>
       </header>
 
       {/* Print header (only shows when printing) */}
-      <div className="hidden print:block px-6 pt-6 pb-2 border-b border-zinc-200 mb-4">
-        <p className="font-mono text-lg font-bold text-gray-900">JEEVES — DIAGNOSTIC RESULTS</p>
+      <div className="hidden print:block px-6 pt-6 pb-2 border-b border-gray-200 mb-4">
+        <p className="text-lg font-bold text-gray-900">Compass — Diagnostic Results</p>
         {diagnosticSubject?.userName && (
-          <p className="font-mono text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-600 mt-1">
             {diagnosticSubject.isManagerMode ? `Assessment for: ${diagnosticSubject.userName}` : `Learner: ${diagnosticSubject.userName}`}
           </p>
         )}
-        <p className="font-mono text-xs text-gray-400 mt-0.5">{new Date().toLocaleDateString()}</p>
+        <p className="text-xs text-gray-500 mt-0.5">{new Date().toLocaleDateString()}</p>
       </div>
 
       <div className="px-4 py-6 max-w-lg mx-auto space-y-10">
 
         {/* ── SECTION 1: STRENGTHS & GAPS ──────────────────────────────── */}
         <section className="print-section">
-          <p className="font-mono text-xs text-gray-400 tracking-widest uppercase mb-4">
-            // 1. Strengths &amp; Gaps
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-4">
+            1. Strengths and gaps
           </p>
 
           {/* Strengths */}
           {gapProfile.strengths.length > 0 && (
             <div className="mb-6">
-              <p className="font-mono text-xs font-semibold text-green-700 uppercase tracking-widest mb-2">
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">
                 Strengths
               </p>
               <div className="space-y-2">
                 {gapProfile.strengths.map((s, i) => (
-                  <div key={i} className="flex items-start gap-3 bg-white border border-zinc-100 px-4 py-3">
-                    <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span>
+                  <div key={i} className="flex items-start gap-3 bg-white border border-gray-100 rounded px-4 py-3">
+                    <span className="text-green-600 mt-0.5 flex-shrink-0">✓</span>
                     <div>
                       <p className="font-semibold text-sm text-gray-900">{s.domain}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{s.note}</p>
@@ -403,16 +401,16 @@ export default function ResultsScreen() {
           {complianceGaps.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-2 h-2 bg-red-500 rounded-full" />
-                <p className="font-mono text-xs font-semibold text-red-700 uppercase tracking-widest">
-                  High Risk — Action Required
+                <span className="w-2 h-2 bg-red-600 rounded-full" />
+                <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">
+                  High risk — action required
                 </p>
               </div>
               <div className="space-y-2">
                 {complianceGaps.map((gap, i) => (
                   <div
                     key={i}
-                    className="bg-red-50 border border-red-100 border-l-4 border-l-red-500 px-4 py-3"
+                    className="bg-red-50 border border-red-100 border-l-4 border-l-red-600 rounded px-4 py-3"
                   >
                     <p className="font-semibold text-sm text-gray-900">{gap.domain}</p>
                     <p className="text-xs text-gray-600 mt-0.5">{gap.summary}</p>
@@ -426,9 +424,9 @@ export default function ResultsScreen() {
           {devGaps.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-2 h-2 bg-blue-500 rounded-full" />
-                <p className="font-mono text-xs font-semibold text-blue-700 uppercase tracking-widest">
-                  Development Areas
+                <span className="w-2 h-2 bg-blue-600 rounded-full" />
+                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                  Development areas
                 </p>
               </div>
               <div className="space-y-2">
@@ -437,7 +435,7 @@ export default function ResultsScreen() {
                   return (
                     <div
                       key={i}
-                      className={`bg-white border border-zinc-100 border-l-4 ${cfg.border} px-4 py-3`}
+                      className={`bg-white border border-gray-100 border-l-4 rounded ${cfg.border} px-4 py-3`}
                     >
                       <p className="font-semibold text-sm text-gray-900">{gap.domain}</p>
                       <p className="text-xs text-gray-600 mt-0.5">{gap.summary}</p>
@@ -449,23 +447,23 @@ export default function ResultsScreen() {
           )}
         </section>
 
-        <hr className="border-zinc-200" />
+        <hr className="border-gray-200" />
 
         {/* ── SECTION 2: LEARNING PLAN ─────────────────────────────────── */}
         <section className="print-section">
-          <p className="font-mono text-xs text-gray-400 tracking-widest uppercase mb-1">
-            // 2. Your Learning Plan
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+            2. Your learning plan
           </p>
           <p className="text-xs text-gray-500 mb-4">
             These courses have been automatically enrolled based on your high-risk gaps.
           </p>
 
           {catalogueError ? (
-            <div className="bg-amber-50 border border-amber-200 px-4 py-3">
-              <p className="font-mono text-sm text-amber-700">{catalogueError}</p>
+            <div className="bg-amber-50 border border-amber-200 rounded px-4 py-3">
+              <p className="text-sm text-amber-800">{catalogueError}</p>
             </div>
           ) : catalogueLoading ? (
-            <p className="font-mono text-xs text-gray-400 cursor-blink py-2">loading courses...</p>
+            <p className="text-xs text-gray-400 py-2">Loading courses…</p>
           ) : complianceCourses.length > 0 ? (
             <div className="space-y-3">
               {complianceCourses.map(({ course, gap }) => (
@@ -480,29 +478,29 @@ export default function ResultsScreen() {
               ))}
             </div>
           ) : (
-            <p className="font-mono text-xs text-gray-400 py-2">
+            <p className="text-xs text-gray-400 py-2">
               No high-risk gaps identified — no automatic enrolments.
             </p>
           )}
         </section>
 
-        <hr className="border-zinc-200" />
+        <hr className="border-gray-200" />
 
         {/* ── SECTION 3: RECOMMENDED ───────────────────────────────────── */}
         <section className="print-section">
-          <p className="font-mono text-xs text-gray-400 tracking-widest uppercase mb-1">
-            // 3. Recommended for You
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+            3. Recommended for you
           </p>
           <p className="text-xs text-gray-500 mb-4">
             Development courses matched to your growth areas. Enrol when ready.
           </p>
 
           {catalogueError ? (
-            <div className="bg-amber-50 border border-amber-200 px-4 py-3">
-              <p className="font-mono text-sm text-amber-700">{catalogueError}</p>
+            <div className="bg-amber-50 border border-amber-200 rounded px-4 py-3">
+              <p className="text-sm text-amber-800">{catalogueError}</p>
             </div>
           ) : catalogueLoading ? (
-            <p className="font-mono text-xs text-gray-400 cursor-blink py-2">loading courses...</p>
+            <p className="text-xs text-gray-400 py-2">Loading courses…</p>
           ) : devCourses.length > 0 ? (
             <div className="space-y-3">
               {devCourses.map(({ course, gap }) => (
@@ -517,7 +515,7 @@ export default function ResultsScreen() {
               ))}
             </div>
           ) : (
-            <p className="font-mono text-xs text-gray-400 py-2">
+            <p className="text-xs text-gray-400 py-2">
               No development course recommendations.
             </p>
           )}
@@ -531,9 +529,9 @@ export default function ResultsScreen() {
               useStore.setState({ gapProfile: null, diagnosticSubject: null })
               navigate('/diagnostic')
             }}
-            className="w-full border border-zinc-300 hover:border-teal-500 text-gray-600 hover:text-teal-700 font-mono text-xs py-4 transition-colors tracking-widest uppercase"
+            className="w-full border border-gray-400 hover:border-brand-600 text-gray-700 hover:text-brand-700 rounded text-sm font-semibold py-4 transition-colors"
           >
-            ↺ Start a new check-in
+            Start a new check-in
           </button>
         </div>
       </div>

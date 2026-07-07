@@ -32,26 +32,28 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dot-grid flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-xs">
+    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm">
 
-        {/* Logo */}
+        {/* Wordmark */}
         <div className="flex flex-col items-center mb-10">
-          <div className="w-12 h-12 border-2 border-teal-600 flex items-center justify-center mb-4 rotate-45">
-            <div className="w-2.5 h-2.5 bg-teal-600 rotate-[-45deg]" />
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Compass</h1>
+            <span className="text-xs font-semibold uppercase tracking-wide bg-gray-800 text-white px-2 py-0.5 rounded-sm">
+              Prototype
+            </span>
           </div>
-          <h1 className="font-mono text-4xl font-bold tracking-tight text-gray-900">JEEVES</h1>
-          <p className="font-mono text-xs text-gray-400 tracking-[0.2em] uppercase mt-1">
-            your learning concierge
+          <p className="text-sm text-gray-500">
+            Leadership skills diagnostic
           </p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <p className="font-mono text-xs text-gray-400 uppercase tracking-widest mb-3">
-              // sign in
-            </p>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Sign in with your work email
+            </label>
             <input
               ref={inputRef}
               type="email"
@@ -60,45 +62,41 @@ export default function LoginScreen() {
                 setEmail(e.target.value)
                 if (status === 'not_found') setStatus('idle')
               }}
-              placeholder="your.name@company.com"
+              placeholder="your.name@organisation.com"
               autoFocus
               autoComplete="email"
               disabled={status === 'loading'}
-              className={`w-full font-mono text-base bg-white border-2 px-4 py-4 placeholder-gray-300 focus:outline-none transition-colors disabled:opacity-50 ${
+              className={`w-full text-base bg-white border-2 rounded px-4 py-3 placeholder-gray-400 focus:outline-none transition-colors disabled:opacity-50 ${
                 status === 'not_found'
-                  ? 'border-red-400 focus:border-red-500'
-                  : 'border-zinc-300 focus:border-teal-600'
+                  ? 'border-red-600 focus:border-red-700'
+                  : 'border-gray-400 focus:border-brand-700'
               }`}
             />
           </div>
 
           {status === 'not_found' && (
-            <div className="bg-red-50 border border-red-200 px-4 py-3">
-              <p className="font-mono text-xs text-red-700">
+            <div className="bg-red-50 border-l-4 border-red-600 px-4 py-3">
+              <p className="text-sm text-red-800">
                 We couldn't find that email address. Check with your manager.
               </p>
             </div>
           )}
 
           {status === 'error' && (
-            <div className="bg-red-50 border border-red-200 px-4 py-3">
-              <p className="font-mono text-xs text-red-700">
+            <div className="bg-red-50 border-l-4 border-red-600 px-4 py-3">
+              <p className="text-sm text-red-800">
                 Something went wrong. Check your connection and try again.
               </p>
-              {errorMsg && <p className="font-mono text-xs text-gray-400 mt-1 break-all">{errorMsg}</p>}
+              {errorMsg && <p className="text-xs text-gray-500 mt-1 break-all">{errorMsg}</p>}
             </div>
           )}
 
           <button
             type="submit"
             disabled={!email.trim() || status === 'loading'}
-            className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-300 text-white font-mono font-semibold py-4 transition-colors tracking-widest uppercase text-sm"
+            className="w-full bg-brand-700 hover:bg-brand-800 disabled:bg-gray-300 text-white font-semibold rounded py-3 transition-colors text-base"
           >
-            {status === 'loading' ? (
-              <span className="cursor-blink">checking</span>
-            ) : (
-              "Let's go →"
-            )}
+            {status === 'loading' ? 'Checking…' : 'Continue'}
           </button>
         </form>
       </div>
