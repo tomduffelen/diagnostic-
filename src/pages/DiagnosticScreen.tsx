@@ -506,7 +506,7 @@ export default function DiagnosticScreen() {
               className="flex-1 bg-transparent text-base font-mono text-gray-800 placeholder-gray-400 focus:outline-none disabled:opacity-50"
             />
             <button
-              onClick={handleSend}
+              onClick={() => handleSend()}
               disabled={!input.trim() || loading}
               className="font-mono text-sm text-teal-600 hover:text-teal-800 disabled:text-gray-300 transition-colors px-3 py-2 border border-teal-600 disabled:border-gray-300 rounded-sm tracking-widest"
             >
