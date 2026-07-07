@@ -874,7 +874,7 @@ export default function JourneyScreen() {
               onClick={() => setView('confirming')}
               className="w-full bg-brand-700 hover:bg-brand-800 text-white font-semibold rounded py-4 transition-colors"
             >
-              Review and book everything
+              Review all bookings
             </button>
           </div>
         </div>
