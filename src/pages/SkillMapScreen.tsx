@@ -10,6 +10,130 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+// ── Leadership profile radar chart ────────────────────────────────────────────
+// Single series (% unlocked per category) — one hue, no legend needed, direct
+// value labels carry the data since there are only a handful of categories.
+
+interface CategoryProgress {
+  category: string
+  percent: number
+  completed: number
+  total: number
+}
+
+const RADAR_BRAND_HEX = '#2a6047' // brand-700, matches the app's action color
+
+// Category names are AI-generated and unbounded in length. Side-anchored
+// labels only get half the margin of top/bottom ones, so truncate to the
+// safe budget for the worst case rather than risk clipping off-canvas.
+function truncateLabel(text: string, max = 18): string {
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text
+}
+
+function RadarChart({ data }: { data: CategoryProgress[] }) {
+  const size = 360
+  const center = size / 2
+  const maxRadius = 70
+  const n = data.length
+
+  const angleFor = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / n
+  const pointFor = (i: number, value: number) => {
+    const angle = angleFor(i)
+    const r = maxRadius * (value / 100)
+    return { x: center + Math.cos(angle) * r, y: center + Math.sin(angle) * r }
+  }
+
+  const ringLevels = [25, 50, 75, 100]
+  const ringPolygon = (level: number) =>
+    data.map((_, i) => pointFor(i, level)).map((p) => `${p.x},${p.y}`).join(' ')
+
+  const dataPolygon = data.map((d, i) => pointFor(i, d.percent)).map((p) => `${p.x},${p.y}`).join(' ')
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-xs mx-auto" role="img" aria-hidden="true">
+        {/* Gridline rings (hairline, recessive) */}
+        {ringLevels.map((level) => (
+          <polygon
+            key={level}
+            points={ringPolygon(level)}
+            fill="none"
+            stroke="#d1d5db"
+            strokeWidth={1}
+          />
+        ))}
+
+        {/* Spokes */}
+        {data.map((_, i) => {
+          const p = pointFor(i, 100)
+          return (
+            <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke="#d1d5db" strokeWidth={1} />
+          )
+        })}
+
+        {/* Data area */}
+        <polygon points={dataPolygon} fill={RADAR_BRAND_HEX} fillOpacity={0.12} stroke={RADAR_BRAND_HEX} strokeWidth={2} strokeLinejoin="round" />
+
+        {/* Vertex markers with surface ring */}
+        {data.map((d, i) => {
+          const p = pointFor(i, d.percent)
+          return <circle key={i} cx={p.x} cy={p.y} r={5} fill={RADAR_BRAND_HEX} stroke="#ffffff" strokeWidth={2} />
+        })}
+
+        {/* Category labels, outside the outer ring — name only, exact
+            percentages live in the stat row below (arbitrary AI-generated
+            category names can be long; an SVG label has no safe wrap) */}
+        {data.map((d, i) => {
+          const angle = angleFor(i)
+          const labelR = maxRadius + 14
+          const x = center + Math.cos(angle) * labelR
+          const y = center + Math.sin(angle) * labelR
+          const anchor = Math.cos(angle) > 0.3 ? 'start' : Math.cos(angle) < -0.3 ? 'end' : 'middle'
+          return (
+            <text
+              key={i}
+              x={x}
+              y={y}
+              textAnchor={anchor}
+              dominantBaseline="middle"
+              fontSize={11}
+              className="fill-gray-600"
+            >
+              {truncateLabel(d.category)}
+            </text>
+          )
+        })}
+      </svg>
+
+      {/* Exact values as a robust HTML row (no SVG text-overflow risk) */}
+      <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
+        {data.map((d) => (
+          <span key={d.category} className="text-xs text-gray-500">
+            {d.category} <span className="font-semibold text-gray-700">{Math.round(d.percent)}%</span>
+          </span>
+        ))}
+      </div>
+
+      {/* Accessible table fallback for the same data */}
+      <table className="sr-only">
+        <caption>Leadership profile: percent of skills unlocked per category</caption>
+        <thead>
+          <tr><th>Category</th><th>Unlocked</th><th>Percent</th></tr>
+        </thead>
+        <tbody>
+          {data.map((d) => (
+            <tr key={d.category}>
+              <td>{d.category}</td>
+              <td>{d.completed} of {d.total}</td>
+              <td>{Math.round(d.percent)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function skillKey(skill: SkillPill): string {
   return `${skill.category}::${skill.name}`
 }
@@ -256,6 +380,21 @@ export default function SkillMapScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skillMap, enrolledCourseIds, catalogue])
 
+  const categoryProgress: CategoryProgress[] = useMemo(() => {
+    if (!skillMap) return []
+    return skillMap.categoryOrder.map((category) => {
+      const pills = skillMap.categories[category]
+      const completed = pills.filter((p) => isSkillCompleted(p)).length
+      return {
+        category,
+        completed,
+        total: pills.length,
+        percent: pills.length > 0 ? (completed / pills.length) * 100 : 0,
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skillMap, enrolledCourseIds, catalogue])
+
   function toggleCategory(category: string) {
     setExpanded((prev) => ({ ...prev, [category]: !prev[category] }))
   }
@@ -302,6 +441,15 @@ export default function SkillMapScreen() {
                 style={{ width: totalSkills > 0 ? `${(completedSkills / totalSkills) * 100}%` : '0%' }}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && skillMap && categoryProgress.length >= 3 && (
+        <div className="bg-white border-b border-gray-200 px-4 py-4">
+          <div className="max-w-lg mx-auto">
+            <p className="text-sm font-semibold text-gray-900 mb-3">Your leadership profile</p>
+            <RadarChart data={categoryProgress} />
           </div>
         </div>
       )}
