@@ -13,19 +13,30 @@ interface BookedModule {
   roomNames: string[]
 }
 
-const STORAGE_KEY = 'compass-journey-bookings'
+// Keyed per subject so a manager planning journeys for several team
+// members (or themselves) doesn't clobber one person's bookings with
+// another's.
+function storageKey(userId: string): string {
+  return `compass-journey-bookings-${userId}`
+}
 
-function loadBookings(): (BookedModule | null)[] {
+function loadBookings(userId: string): (BookedModule | null)[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(storageKey(userId))
     return raw ? JSON.parse(raw) : []
   } catch {
     return []
   }
 }
 
-function saveBookings(bookings: (BookedModule | null)[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings))
+function saveBookings(userId: string, bookings: (BookedModule | null)[]): void {
+  localStorage.setItem(storageKey(userId), JSON.stringify(bookings))
+}
+
+interface JourneySubject {
+  userId: string
+  userName: string
+  isManagerMode: boolean
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -165,15 +176,26 @@ function DateCard({
 
 type Phase = 'loading' | 'timeline' | 'date-picker' | 'error' | 'empty'
 type WaitStatus = 'created' | 'waitlisted' | 'requested' | null
+type SubjectPhase = 'mode-select' | 'member-select' | 'ready'
 
 export default function JourneyScreen() {
   const navigate = useNavigate()
   const currentUser = useStore((s) => s.currentUser)
+  const directReports = useStore((s) => s.directReports)
+
+  const [subjectPhase, setSubjectPhase] = useState<SubjectPhase>(
+    directReports.length > 0 ? 'mode-select' : 'ready'
+  )
+  const [subject, setSubject] = useState<JourneySubject | null>(
+    directReports.length > 0 || !currentUser
+      ? null
+      : { userId: currentUser.id, userName: currentUser.fullname, isManagerMode: false }
+  )
 
   const [phase, setPhase] = useState<Phase>('loading')
   const [modules, setModules] = useState<JourneyModule[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [bookings, setBookings] = useState<(BookedModule | null)[]>(() => loadBookings())
+  const [bookings, setBookings] = useState<(BookedModule | null)[]>([])
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
@@ -184,25 +206,33 @@ export default function JourneyScreen() {
   const [revealIndex, setRevealIndex] = useState<number | null>(null)
   const [revealActive, setRevealActive] = useState(false)
 
+  function selectSubject(s: JourneySubject) {
+    setSubject(s)
+    setSubjectPhase('ready')
+  }
+
   function setBooking(index: number, booking: BookedModule) {
+    if (!subject) return
     setBookings((prev) => {
       const next = [...prev]
       next[index] = booking
-      saveBookings(next)
+      saveBookings(subject.userId, next)
       return next
     })
   }
 
   function clearFrom(index: number) {
+    if (!subject) return
     setBookings((prev) => {
       const next = [...prev]
       for (let i = index; i < next.length; i++) next[i] = null
-      saveBookings(next)
+      saveBookings(subject.userId, next)
       return next
     })
   }
 
   async function load() {
+    if (!subject) return
     setPhase('loading')
     setError(null)
     try {
@@ -213,16 +243,15 @@ export default function JourneyScreen() {
       }
       setModules(mods)
 
-      if (currentUser) {
-        const persisted = loadBookings()
-        for (let i = 0; i < persisted.length; i++) {
-          const b = persisted[i]
-          if (!b) continue
-          const stillExists = await checkBooking(currentUser.id, b.eventId)
-          if (!stillExists) {
-            clearFrom(i)
-            break
-          }
+      const persisted = loadBookings(subject.userId)
+      setBookings(persisted)
+      for (let i = 0; i < persisted.length; i++) {
+        const b = persisted[i]
+        if (!b) continue
+        const stillExists = await checkBooking(subject.userId, b.eventId)
+        if (!stillExists) {
+          clearFrom(i)
+          break
         }
       }
       setPhase('timeline')
@@ -233,9 +262,11 @@ export default function JourneyScreen() {
   }
 
   useEffect(() => {
-    load()
+    if (subjectPhase === 'ready' && subject) {
+      load()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [subjectPhase, subject?.userId])
 
   useEffect(() => {
     if (phase === 'timeline' && revealIndex !== null) {
@@ -280,11 +311,11 @@ export default function JourneyScreen() {
   }, [activeModule, activeIndex, bookings])
 
   async function handleBook() {
-    if (!selectedEventId || !currentUser || activeIndex === null) return
+    if (!selectedEventId || !subject || activeIndex === null) return
     setBookingStatus('loading')
     setBookingMessage(null)
 
-    const result = await bookEvent(selectedEventId, currentUser.id)
+    const result = await bookEvent(selectedEventId, subject.userId)
 
     if (result.outcome === 'error') {
       setBookingStatus('error')
@@ -313,6 +344,70 @@ export default function JourneyScreen() {
 
   const allBooked = modules.length > 0 && modules.every((_, i) => !!bookings[i])
   const bookedCount = bookings.filter(Boolean).length
+
+  if (subjectPhase === 'mode-select') {
+    return (
+      <div className="min-h-screen bg-stone-50 flex flex-col">
+        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+          <button onClick={() => navigate('/')} className="text-sm text-gray-400 hover:text-gray-700 transition-colors">
+            ←
+          </button>
+          <p className="text-sm font-bold text-gray-900">Learning journey</p>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-12">
+          <p className="text-sm text-gray-600 mb-6">Who is this journey for?</p>
+          <div className="flex gap-3 w-full max-w-xs">
+            <button
+              onClick={() =>
+                currentUser &&
+                selectSubject({ userId: currentUser.id, userName: currentUser.fullname, isManagerMode: false })
+              }
+              className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-semibold rounded py-5 transition-colors"
+            >
+              Myself
+            </button>
+            <button
+              onClick={() => setSubjectPhase('member-select')}
+              className="flex-1 bg-white hover:bg-gray-50 border border-gray-400 text-gray-800 font-semibold rounded py-5 transition-colors"
+            >
+              A team member
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (subjectPhase === 'member-select') {
+    return (
+      <div className="min-h-screen bg-stone-50 flex flex-col">
+        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+          <button
+            onClick={() => setSubjectPhase('mode-select')}
+            className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            ←
+          </button>
+          <p className="text-sm font-bold text-gray-900">Learning journey</p>
+        </header>
+        <div className="flex-1 px-4 py-6 max-w-lg mx-auto w-full">
+          <p className="text-sm text-gray-600 mb-5">Select team member</p>
+          <div className="space-y-2">
+            {directReports.map((report) => (
+              <button
+                key={report.userId}
+                onClick={() => selectSubject({ userId: report.userId, userName: report.userName, isManagerMode: true })}
+                className="w-full text-left px-4 py-4 border rounded bg-white border-gray-300 hover:border-brand-500 transition-colors"
+              >
+                <p className="text-sm font-semibold text-gray-900">{report.userName}</p>
+                {report.position && <p className="text-xs text-brand-700 mt-0.5">{report.position}</p>}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (phase === 'loading') {
     return (
@@ -351,7 +446,10 @@ export default function JourneyScreen() {
           <button onClick={closeDatePicker} className="text-sm text-gray-400 hover:text-gray-700 transition-colors">
             ←
           </button>
-          <p className="text-sm font-bold text-gray-900">{activeModule.name}</p>
+          <div>
+            <p className="text-sm font-bold text-gray-900">{activeModule.name}</p>
+            {subject?.isManagerMode && <p className="text-xs text-brand-700">For {subject.userName}</p>}
+          </div>
         </header>
 
         <div className="flex-1 px-4 py-6 max-w-lg mx-auto w-full space-y-3">
@@ -414,13 +512,18 @@ export default function JourneyScreen() {
         <button onClick={() => navigate('/')} className="text-sm text-gray-400 hover:text-gray-700 transition-colors">
           ←
         </button>
-        <p className="text-sm font-bold text-gray-900">Learning journey</p>
+        <div>
+          <p className="text-sm font-bold text-gray-900">Learning journey</p>
+          {subject?.isManagerMode && <p className="text-xs text-brand-700">For {subject.userName}</p>}
+        </div>
       </header>
 
       {!allBooked && (
         <div className="bg-white border-b border-gray-200 px-4 py-4">
           <div className="max-w-lg mx-auto">
-            <p className="text-sm font-semibold text-gray-900">Your learning journey</p>
+            <p className="text-sm font-semibold text-gray-900">
+              {subject?.isManagerMode ? `${subject.userName}'s learning journey` : 'Your learning journey'}
+            </p>
             <p className="text-xs text-gray-500">
               {modules.length} module{modules.length !== 1 ? 's' : ''} · {bookedCount} of {modules.length} booked
             </p>
@@ -433,7 +536,9 @@ export default function JourneyScreen() {
           <div className="text-center mb-2 no-print">
             <p className="text-2xl mb-1">✓</p>
             <p className="text-lg font-bold text-gray-900">Journey booked</p>
-            <p className="text-sm text-gray-500">Your learning plan</p>
+            <p className="text-sm text-gray-500">
+              {subject?.isManagerMode ? `${subject.userName}'s learning plan` : 'Your learning plan'}
+            </p>
           </div>
 
           {modules.map((module, i) => {
@@ -475,7 +580,7 @@ export default function JourneyScreen() {
               onClick={() => window.print()}
               className="w-full border border-gray-400 hover:border-brand-600 text-gray-700 hover:text-brand-700 rounded text-sm font-semibold py-3 transition-colors"
             >
-              Share with my manager
+              {subject?.isManagerMode ? `Share with ${subject.userName.split(' ')[0]}` : 'Share with my manager'}
             </button>
           </div>
         </div>
