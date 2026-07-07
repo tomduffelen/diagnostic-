@@ -15,6 +15,7 @@ export interface Course {
   compliance_flag: boolean
   estimated_duration: number
   skillArea?: string
+  category?: { id: string }
   completion?: {
     statuskey: string | null
     timecompleted: string | null
@@ -44,6 +45,7 @@ interface RawCourse {
   summary?: string | null
   image?: string | null
   url: string
+  category?: { id: number | string } | null
   completion?: {
     statuskey: string | null
     timecompleted: string | null
@@ -216,6 +218,7 @@ const COURSES_QUERY = `
         summary
         image
         url
+        category { id }
         completion {
           statuskey
           timecompleted
@@ -264,6 +267,7 @@ function parseCourse(item: RawCourse): Course {
     summary: item.summary ?? '',
     imageUrl: item.image ?? undefined,
     url: item.url,
+    category: item.category ? { id: String(item.category.id) } : undefined,
     completion: item.completion ?? undefined,
     ...parsed,
     raw_customfields: customfields,

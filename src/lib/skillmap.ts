@@ -87,15 +87,23 @@ function writeCache(courseCount: number, data: CourseSkillGroup[]): void {
   localStorage.setItem(CACHE_KEY, JSON.stringify({ courseCount, data }))
 }
 
+// Demo scope: only the leadership course category, capped to a small
+// batch so a single Claude call stays fast and reliable on Vercel.
+const LEADERSHIP_CATEGORY_ID = '7'
+const DEMO_COURSE_CAP = 20
+
 export async function extractSkills(catalogue: Course[]): Promise<CourseSkillGroup[]> {
-  const validCatalogue = catalogue.filter((c) => !isExcludedCourse(c))
+  const validCatalogue = catalogue
+    .filter((c) => !isExcludedCourse(c))
+    .filter((c) => c.category?.id === LEADERSHIP_CATEGORY_ID)
+    .slice(0, DEMO_COURSE_CAP)
 
   const cached = readCache(validCatalogue.length)
   if (cached) return cached
 
   const body = JSON.stringify({
     model: 'claude-sonnet-4-5',
-    max_tokens: 8192,
+    max_tokens: 3000,
     messages: [{ role: 'user', content: buildPrompt(validCatalogue) }],
   })
 
