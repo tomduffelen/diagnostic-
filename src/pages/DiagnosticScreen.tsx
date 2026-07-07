@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { useStore } from '../store'
-import { sendMessage, extractGapProfile, type Message, type DiagnosticSubjectContext } from '../lib/diagnostic'
+import { sendMessage, extractGapProfile, HARD_CAP_EXCHANGES, type Message, type DiagnosticSubjectContext } from '../lib/diagnostic'
 import { getCatalogue } from '../lib/totara'
 
 const ROLE_OPTIONS = [
@@ -147,8 +147,24 @@ export default function DiagnosticScreen() {
         ? { userName: selectedMember.userName, isManagerMode: true }
         : undefined
       const reply = await sendMessage(history, catalogue, storedRoles, subject)
-      addMessage({ role: 'assistant', content: reply })
-      const profile = extractGapProfile(reply)
+      let profile = extractGapProfile(reply)
+      let finalReply = reply
+
+      // Safety net: if the model was supposed to wrap up on this exchange
+      // but didn't produce a valid gap_profile (e.g. it leaked commentary
+      // instead), retry once rather than leaving the learner with no way
+      // to reach results.
+      const exchangeCount = history.filter((m) => m.role === 'user').length
+      if (!profile && exchangeCount >= HARD_CAP_EXCHANGES) {
+        const retryReply = await sendMessage(history, catalogue, storedRoles, subject)
+        const retryProfile = extractGapProfile(retryReply)
+        if (retryProfile) {
+          finalReply = retryReply
+          profile = retryProfile
+        }
+      }
+
+      addMessage({ role: 'assistant', content: finalReply })
       if (profile) {
         setGapProfile(profile)
         setProfileDetected(true)

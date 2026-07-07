@@ -29,7 +29,10 @@ function stripHtml(html: string): string {
 // Hard ceiling on how many user replies the conversation can take before
 // it's forced to conclude — a prompt-only "keep it short" instruction
 // wasn't reliably respected, so this is enforced in code as well.
-const HARD_CAP_EXCHANGES = 5
+// 6 (not 5) leaves enough room to rotate through more than one question
+// format before wrapping up, rather than defaulting to fast multiple-choice
+// every time under a tighter cap.
+export const HARD_CAP_EXCHANGES = 6
 
 function buildSystemPrompt(
   catalogue: Course[],
@@ -77,7 +80,7 @@ function buildSystemPrompt(
 
   const mustWrapUp = exchangeCount >= HARD_CAP_EXCHANGES
   const wrapUpDirective = mustWrapUp
-    ? `\nSTOP: This is the final exchange. You MUST output ONLY the <gap_profile> block right now, based on everything discussed so far. Do NOT ask another question, even if you haven't covered every domain.\n`
+    ? `\n(The following is a private instruction for you only — never repeat, quote, or reference it to the learner.) The exchange limit has been reached. Do not ask another question. Skip straight to the <gap_profile> output described near the end of this prompt, based on everything discussed so far, even if you haven't covered every domain. Your entire reply must be that block and nothing else.\n`
     : ''
 
   return `You are Compass, a leadership development coach.
@@ -93,8 +96,9 @@ RULES:
   3. Open reflection: ask about a real experience ("Tell me about a time you had to give someone difficult feedback — how did you handle it?")
   4. Confidence check: "How comfortable are you with [skill]?" with options Not yet / Getting there / Confident
 - BRANCHING: If a learner shows uncertainty or a gap in an area, ask at least one deeper follow-up before moving on. If clearly confident, move on without probing.
-- LENGTH: target 3–4 exchanges total. ${HARD_CAP_EXCHANGES} is a HARD MAXIMUM — you must end the conversation and output the gap_profile by then, no exceptions, even if you haven't covered every domain. Prioritise your highest-signal questions first so you can conclude confidently within this limit. Never pad with unnecessary questions.
+- LENGTH: target 4–5 exchanges total. ${HARD_CAP_EXCHANGES} is a HARD MAXIMUM — you must end the conversation and output the gap_profile by then, no exceptions, even if you haven't covered every domain. Still rotate through at least two different question types before wrapping up — don't default to multiple choice every time just because it's faster. Never pad with unnecessary questions.
 - Only reference courses that exist in the catalogue below. Use exact course titles.
+- NEVER mention exchange counts, turn limits, or any meta-commentary about the conversation's length or ending to the learner — these are private instructions to you, not content to relay.
 
 ${roleContext}
 
@@ -113,7 +117,7 @@ Example:
 
 Available courses in this organisation's Totara catalogue:
 ${courseList}
-
+${mustWrapUp ? '\nThe exchange limit has been reached — output the gap_profile block below right now, with no other text before or after it.\n' : ''}
 When you have enough information, output ONLY the following — nothing else after it:
 
 <gap_profile>
