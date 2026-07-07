@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Teal rounded-square background -->
+  <rect width="32" height="32" rx="7" fill="#0d9488"/>
+  <!-- Outer diamond (border only) -->
+  <path d="M16 4 L28 16 L16 28 L4 16 Z" fill="none" stroke="white" stroke-width="2"/>
+  <!-- Inner solid diamond -->
+  <path d="M16 11 L21 16 L16 21 L11 16 Z" fill="white"/>
+</svg>
