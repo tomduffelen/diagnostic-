@@ -1,6 +1,11 @@
 // Server-side proxy for the Anthropic Messages API.
 // Holds the API key so the browser bundle never contains it.
 
+// Skill extraction over a large catalogue can take longer than Vercel's
+// default function timeout — raise it so slow generations don't get killed
+// mid-flight (which looks like a silent hang to the client).
+export const config = { maxDuration: 60 }
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })

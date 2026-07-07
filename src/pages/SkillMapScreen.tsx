@@ -250,7 +250,8 @@ export default function SkillMapScreen() {
 
       {!loading && error && (
         <div className="px-4 py-16 max-w-lg mx-auto text-center">
-          <p className="text-sm text-gray-600 mb-4">Skill map unavailable — try again</p>
+          <p className="text-sm text-gray-600 mb-2">Skill map unavailable — try again</p>
+          <p className="text-xs text-gray-400 mb-4 break-words">{error}</p>
           <button
             onClick={load}
             className="bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold rounded px-6 py-3"

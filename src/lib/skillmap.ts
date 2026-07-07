@@ -55,9 +55,19 @@ Courses:
 ${courseList}`
 }
 
-function parseSkillResponse(text: string): CourseSkillGroup[] {
+function parseSkillResponse(text: string, stopReason?: string): CourseSkillGroup[] {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '')
-  const parsed = JSON.parse(cleaned)
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(cleaned)
+  } catch (err) {
+    if (stopReason === 'max_tokens') {
+      throw new Error(
+        `Claude's response was cut off before finishing (catalogue is likely too large for one pass). Raw error: ${String(err)}`
+      )
+    }
+    throw new Error(`Could not parse skill extraction response as JSON: ${String(err)}`)
+  }
   if (!Array.isArray(parsed)) throw new Error('Expected a JSON array from skill extraction')
   return parsed as CourseSkillGroup[]
 }
@@ -85,7 +95,7 @@ export async function extractSkills(catalogue: Course[]): Promise<CourseSkillGro
 
   const body = JSON.stringify({
     model: 'claude-sonnet-4-5',
-    max_tokens: 4000,
+    max_tokens: 8192,
     messages: [{ role: 'user', content: buildPrompt(validCatalogue) }],
   })
 
@@ -112,7 +122,7 @@ export async function extractSkills(catalogue: Course[]): Promise<CourseSkillGro
 
   const data = await res.json()
   const text = data.content[0].text as string
-  const groups = parseSkillResponse(text)
+  const groups = parseSkillResponse(text, data.stop_reason)
 
   writeCache(validCatalogue.length, groups)
   return groups
