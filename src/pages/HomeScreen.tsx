@@ -132,6 +132,12 @@ export default function HomeScreen() {
             >
               Explore skill map
             </button>
+            <button
+              onClick={() => navigate('/journey')}
+              className="bg-white hover:bg-gray-50 border border-gray-400 text-gray-800 font-semibold rounded px-8 py-4 w-full transition-colors text-base"
+            >
+              Plan your learning journey
+            </button>
           </div>
         ) : (
           <div className="w-full max-w-xs space-y-3">
@@ -174,6 +180,12 @@ export default function HomeScreen() {
               className="bg-white hover:bg-gray-50 border border-gray-400 text-gray-800 font-semibold rounded px-6 py-3 w-full transition-colors"
             >
               Explore skill map
+            </button>
+            <button
+              onClick={() => navigate('/journey')}
+              className="bg-white hover:bg-gray-50 border border-gray-400 text-gray-800 font-semibold rounded px-6 py-3 w-full transition-colors"
+            >
+              Plan your learning journey
             </button>
           </div>
         )}

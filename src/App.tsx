@@ -7,6 +7,7 @@ import DiagnosticScreen from './pages/DiagnosticScreen'
 import ResultsScreen from './pages/ResultsScreen'
 import CoursesScreen from './pages/CoursesScreen'
 import SkillMapScreen from './pages/SkillMapScreen'
+import JourneyScreen from './pages/JourneyScreen'
 import DebugScreen from './pages/DebugScreen'
 
 const REQUIRED_VARS = [
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/results" element={<ResultsScreen />} />
         <Route path="/courses" element={<CoursesScreen />} />
         <Route path="/skillmap" element={<SkillMapScreen />} />
+        <Route path="/journey" element={<JourneyScreen />} />
         <Route path="/debug" element={<DebugScreen />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
