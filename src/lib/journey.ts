@@ -1,4 +1,4 @@
-import { getAccessToken } from './totara'
+import { getAccessToken, getCatalogue } from './totara'
 
 // ── Request plumbing ──────────────────────────────────────────────────────────
 // Same dev/prod split as diagnostic.ts/skillmap.ts: dev talks to the Vite proxy
@@ -63,6 +63,60 @@ export interface BookingResult {
   outcome: 'created' | 'waitlisted' | 'requested' | 'error'
   message?: string
   stateTitle?: string
+}
+
+// ── getJourneyProgrammes ──────────────────────────────────────────────────────
+// Course-selection screen for the journey feature only: courses in category 8
+// with at least one seminar. Reuses getCatalogue() (already fetches
+// category{id}) rather than a new catalogue query.
+
+export interface JourneyProgramme {
+  courseId: string
+  name: string
+  description: string
+  seminarIds: string[]
+}
+
+const PROGRAMME_CATEGORY_ID = '8'
+
+const SEMINARS_IN_COURSE_QUERY = `
+  query mod_facetoface_seminars_in_course($course: core_course_course_reference!, $query: mod_facetoface_seminars_in_course_query) {
+    mod_facetoface_seminars_in_course(course: $course, query: $query) {
+      items { id name }
+      total
+    }
+  }
+`
+
+// The spec's status/tense filters don't exist on this query (confirmed
+// against the live schema — those are event-level concepts, not seminar-
+// in-course ones). getJourneyModules() below already filters to
+// FUTURE/ACTIVE at the events level, so a seminar with no qualifying
+// events simply won't produce a module downstream anyway — this check
+// only needs to answer "does this course have any seminars at all."
+async function getCourseSeminarIds(courseId: string): Promise<string[]> {
+  const data = await journeyGqlRequest<{
+    mod_facetoface_seminars_in_course: { items: Array<{ id: string; name: string }>; total: number }
+  }>(SEMINARS_IN_COURSE_QUERY, {
+    course: { id: parseInt(courseId, 10) },
+    query: {},
+  })
+  return data.mod_facetoface_seminars_in_course.items.map((s) => s.id)
+}
+
+export async function getJourneyProgrammes(): Promise<JourneyProgramme[]> {
+  const catalogue = await getCatalogue()
+  const categoryCourses = catalogue.filter((c) => c.category?.id === PROGRAMME_CATEGORY_ID)
+
+  // Fired in parallel per the spec, not sequentially.
+  const results = await Promise.all(
+    categoryCourses.map(async (course) => {
+      const seminarIds = await getCourseSeminarIds(course.id)
+      return { courseId: course.id, name: course.title, description: course.summary, seminarIds }
+    })
+  )
+
+  return results.filter((p) => p.seminarIds.length > 0)
 }
 
 // ── getJourneyModules ─────────────────────────────────────────────────────────
