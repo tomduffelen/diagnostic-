@@ -119,12 +119,20 @@ export default function HomeScreen() {
         )}
 
         {!gapProfile ? (
-          <button
-            onClick={() => navigate('/diagnostic')}
-            className="bg-brand-700 hover:bg-brand-800 active:bg-brand-900 text-white font-semibold rounded px-8 py-4 w-full max-w-xs transition-colors text-base"
-          >
-            Start diagnostic
-          </button>
+          <div className="w-full max-w-xs space-y-3">
+            <button
+              onClick={() => navigate('/diagnostic')}
+              className="bg-brand-700 hover:bg-brand-800 active:bg-brand-900 text-white font-semibold rounded px-8 py-4 w-full transition-colors text-base"
+            >
+              Start diagnostic
+            </button>
+            <button
+              onClick={() => navigate('/skillmap')}
+              className="bg-white hover:bg-gray-50 border border-gray-400 text-gray-800 font-semibold rounded px-8 py-4 w-full transition-colors text-base"
+            >
+              Explore skill map
+            </button>
+          </div>
         ) : (
           <div className="w-full max-w-xs space-y-3">
             <div className="bg-white border border-gray-200 rounded p-4 text-left">
@@ -160,6 +168,12 @@ export default function HomeScreen() {
               className="text-brand-700 hover:text-brand-800 text-sm font-semibold px-6 py-2 w-full transition-colors underline"
             >
               My courses
+            </button>
+            <button
+              onClick={() => navigate('/skillmap')}
+              className="bg-white hover:bg-gray-50 border border-gray-400 text-gray-800 font-semibold rounded px-6 py-3 w-full transition-colors"
+            >
+              Explore skill map
             </button>
           </div>
         )}
